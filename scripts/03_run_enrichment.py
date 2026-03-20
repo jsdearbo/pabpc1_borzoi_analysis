@@ -1,0 +1,157 @@
+"""
+Step 3 — Motif enrichment analysis (SEA + FIMO).
+
+Reads the input sequences and mapping produced by 01_get_attributions.py,
+generates per-subset FASTA files, and runs pairwise enrichment comparisons
+using motifs from a specified MoDISco run.
+
+Usage
+-----
+    python scripts/03_run_enrichment.py --config config/example_config.yaml
+
+Outputs (written under experiment_dir/enrichment/<primary>_vs_<control>/)
+--------------------------------------------------------------------------
+    fasta_files/            — one .fa per subset
+    sea/sea.tsv             — SEA results
+    sea/sea_enrichment.csv  — tidy SEA summary
+    fimo/fimo_enrichment.csv — FIMO per-motif hit percentages
+    */sea_enrichment_scatter.png, */fimo_enrichment_scatter.png
+"""
+import os
+import sys
+import pickle
+import logging
+import argparse
+import numpy as np
+import pandas as pd
+import yaml
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.utility_functions import setup_experiment_directory, validate_file
+from utils.enrichment_functions import (
+    run_enrichment_analysis, write_fasta, check_dependencies
+)
+
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description="Run motif enrichment analysis")
+    p.add_argument("--config", required=True, help="Path to YAML config file")
+    return p.parse_args()
+
+
+def load_config(config_path: str) -> dict:
+    with open(config_path) as f:
+        return yaml.safe_load(f) or {}
+
+
+def get_subset_sequences(subset_mask, input_seqs, mapping_df, coord_data):
+    """Extract sequences and names for a boolean row mask over coord_data."""
+    valid_indices   = np.where(subset_mask)[0]
+    subset_mapping  = mapping_df[mapping_df["coord_index"].isin(valid_indices)]
+    indices         = subset_mapping["attribution_index"].values
+    seqs            = [input_seqs[i] for i in indices]
+    names           = (subset_mapping["name"].values.tolist()
+                       if "name" in subset_mapping else
+                       [f"seq_{i}" for i in indices])
+    return seqs, names
+
+
+def main():
+    args = parse_args()
+    cfg  = load_config(args.config)
+
+    experiment_dir  = cfg["experiment_dir"]
+    coord_file_path = cfg["coord_file_path"]
+    groupby_col     = cfg.get("groupby_column")
+
+    # Which MoDISco run to take motifs from
+    enrich_cfg   = cfg.get("enrichment", {})
+    source_subset = enrich_cfg.get("source_subset", "all_peaks_modisco")
+    source_flank  = enrich_cfg.get("source_flank", "masked_50bp_flank")
+    comparisons   = enrich_cfg.get("comparisons", [])
+    run_sea       = enrich_cfg.get("run_sea", True)
+    run_fimo      = enrich_cfg.get("run_fimo", True)
+
+    check_dependencies()
+    validate_file(coord_file_path, "Coordinate file")
+    setup_experiment_directory(experiment_dir)
+
+    # Locate motif file
+    motif_file = os.path.join(experiment_dir, source_subset, source_flank, "forward.meme")
+    if not os.path.exists(motif_file):
+        alt = os.path.join(experiment_dir, source_subset, source_flank, "meme.txt")
+        if os.path.exists(alt):
+            motif_file = alt
+        else:
+            raise FileNotFoundError(
+                f"Motif file not found at {motif_file} (or meme.txt). "
+                "Run 02_run_modisco.py first."
+            )
+    logger.info(f"Using motifs from: {motif_file}")
+
+    # Load data produced by step 1
+    with open(os.path.join(experiment_dir, "input_seqs.pkl"), "rb") as f:
+        input_seqs = pickle.load(f)
+    mapping_df  = pd.read_csv(os.path.join(experiment_dir, "attribution_mapping.csv"))
+    coord_data  = pd.read_csv(coord_file_path)
+    logger.info(f"Loaded {len(coord_data)} coordinate rows")
+
+    # Build subset masks (must match logic from 02_run_modisco.py)
+    subset_masks = {}
+    if groupby_col and groupby_col in coord_data.columns:
+        for val in coord_data[groupby_col].unique():
+            label = f"{val}_peaks_modisco"
+            subset_masks[label] = (coord_data[groupby_col] == val).values
+    subset_masks["all_peaks_modisco"] = np.ones(len(coord_data), dtype=bool)
+
+    # Generate FASTA files for every subset
+    fasta_dir   = os.path.join(experiment_dir, "fasta_files")
+    os.makedirs(fasta_dir, exist_ok=True)
+    fasta_paths = {}
+    for name, mask in subset_masks.items():
+        seqs, names = get_subset_sequences(mask, input_seqs, mapping_df, coord_data)
+        out_path    = os.path.join(fasta_dir, f"{name}.fa")
+        write_fasta(seqs, names, out_path)
+        fasta_paths[name] = out_path
+        logger.info(f"FASTA written for '{name}': {len(seqs)} sequences → {out_path}")
+
+    # Run comparisons
+    if not comparisons:
+        logger.warning(
+            "No comparisons defined in config enrichment.comparisons. "
+            "Nothing to analyse."
+        )
+        return
+
+    for comp in comparisons:
+        prim_label = f"{comp['primary']}_peaks_modisco"
+        ctrl_label = f"{comp['control']}_peaks_modisco"
+        if prim_label not in fasta_paths or ctrl_label not in fasta_paths:
+            logger.warning(
+                f"Skipping {prim_label} vs {ctrl_label}: subset FASTA not found."
+            )
+            continue
+
+        logger.info(f"Enrichment: {prim_label} vs {ctrl_label}")
+        comp_dir = os.path.join(
+            experiment_dir, "enrichment", f"{prim_label}_vs_{ctrl_label}"
+        )
+        run_enrichment_analysis(
+            primary_fasta=fasta_paths[prim_label],
+            control_fasta=fasta_paths[ctrl_label],
+            meme_file=motif_file,
+            output_dir=comp_dir,
+            run_sea_tool=run_sea,
+            run_fimo_tool=run_fimo,
+        )
+
+    logger.info("Enrichment analysis complete.")
+
+
+if __name__ == "__main__":
+    main()

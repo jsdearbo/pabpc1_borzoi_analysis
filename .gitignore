@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+*.pkl
+*.h5
+*.bw
+outputs/

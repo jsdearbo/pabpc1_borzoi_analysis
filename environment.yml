@@ -1,0 +1,42 @@
+name: pabpc1-borzoi
+channels:
+  - nvidia
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - bedtools>=2.30
+  - pip
+  - pip:
+    # Deep learning
+    - torch>=2.0
+    - pytorch-lightning>=2.0
+
+    # gReLU genomics library (includes Borzoi model loading and attribution)
+    # https://github.com/Genentech/gReLU
+    - grelu>=0.4
+
+    # Motif discovery & enrichment
+    - tangermeme==0.4.2   # pinned — API changed in later versions
+
+    # Bioinformatics I/O
+    - h5py>=3.10
+    - pysam>=0.22
+    - pyBigWig>=0.3
+
+    # Data science
+    - numpy>=1.24,<2.0
+    - pandas>=2.0
+    - scipy>=1.10
+    - scikit-learn>=1.3
+
+    # Visualisation
+    - matplotlib>=3.7
+    - seaborn>=0.13
+    - logomaker>=0.8
+    - adjustText>=1.0
+
+    # Utilities
+    - pyyaml>=6.0
+    - tqdm
