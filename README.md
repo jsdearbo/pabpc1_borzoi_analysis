@@ -73,7 +73,7 @@ A CSV with one row per genomic element (eCLIP-seq peak, RBP site, or intron). Re
 | `start` | Element start position (0-based) |
 | `end` | Element end position |
 | `strand` | `+` or `-` |
-| `intron_name` | Unique element identifier (or `name`) |
+| `unique_ID` | Unique element identifier (or `name`) |
 
 Optional columns used when present:
 

@@ -116,7 +116,7 @@ def filter_by_strand(df: pd.DataFrame, seq_name: str,
                       indexing_df: pd.DataFrame) -> pd.DataFrame:
     """Keep only rows matching the native strand for seq_name."""
     correct_strand = indexing_df.loc[
-        indexing_df["intron_name"] == seq_name, "strand"
+        indexing_df["unique_ID"] == seq_name, "strand"
     ].values[0]
     return df[df["strand"] == correct_strand]
 
@@ -124,7 +124,7 @@ def filter_by_strand(df: pd.DataFrame, seq_name: str,
 def reorder_modiscolite_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Standardise column order for MoDISco-lite output."""
     cols = ['pattern_label', 'example_index', 'start', 'end',
-            'name', 'score', 'strand', 'intron_name']
+            'name', 'score', 'strand', 'unique_ID']
     return df[cols]
 
 
@@ -149,12 +149,12 @@ def handle_fimo(
         if "sequence_name" in df.columns and not df.empty:
             seq_name = df["sequence_name"].iloc[0]
             tensor_start = indexing_df.loc[
-                indexing_df["intron_name"] == seq_name, "tensor_start"
+                indexing_df["unique_ID"] == seq_name, "tensor_start"
             ]
             if not tensor_start.empty:
                 df = update_coordinates(df, tensor_start.values[0])
                 df = filter_by_strand(df, seq_name, indexing_df)
-                df['intron_name'] = seq_name
+                df['unique_ID'] = seq_name
                 if "motif_name" not in df.columns:
                     df['motif_name'] = "unknown"
                 all_rows.append(df)
@@ -168,12 +168,12 @@ def handle_fimo(
         motif_df = annotations[annotations['motif_name'] == de_novo_motif]
         motif_logo_plot_dir = os.path.join(logo_plot_dir, de_novo_motif)
         os.makedirs(motif_logo_plot_dir, exist_ok=True)
-        for seq_name in motif_df['intron_name'].unique():
-            df = motif_df[motif_df['intron_name'] == seq_name]
+        for seq_name in motif_df['unique_ID'].unique():
+            df = motif_df[motif_df['unique_ID'] == seq_name]
             if not df.empty:
                 top_row  = df.loc[df['score'].idxmax()]
                 attr_idx = indexing_df.loc[
-                    indexing_df["intron_name"] == seq_name, 'index'
+                    indexing_df["unique_ID"] == seq_name, 'index'
                 ].values[0]
                 arr = pt_attributions[attr_idx]
                 plot_logo_and_optional_gene_map(
@@ -238,8 +238,8 @@ def handle_modiscolite(
     annotations = extract_seqlets_to_bed_modiscolite(
         h5_file, 'both', indexing_df=indexing_df
     )
-    index_to_name = dict(zip(indexing_df['index'], indexing_df['intron_name']))
-    annotations['intron_name'] = (
+    index_to_name = dict(zip(indexing_df['index'], indexing_df['unique_ID']))
+    annotations['unique_ID'] = (
         annotations['example_index'].map(index_to_name).fillna('unknown')
     )
 
@@ -250,9 +250,9 @@ def handle_modiscolite(
     # Filter to valid sequences and correct strand
     annotations = annotations[
         annotations.apply(lambda row: (
-            row['intron_name'] in indexing_df['intron_name'].values and
+            row['unique_ID'] in indexing_df['unique_ID'].values and
             row['strand'] == indexing_df.loc[
-                indexing_df['intron_name'] == row['intron_name'], 'strand'
+                indexing_df['unique_ID'] == row['unique_ID'], 'strand'
             ].values[0]
         ), axis=1)
     ]
@@ -262,7 +262,7 @@ def handle_modiscolite(
     annotations = reorder_modiscolite_columns(annotations)
 
     if intron_of_interest:
-        annotations = annotations[annotations['intron_name'] == intron_of_interest]
+        annotations = annotations[annotations['unique_ID'] == intron_of_interest]
 
     for de_novo_motif in annotations['pattern_label'].unique():
         motif_df = annotations[annotations['pattern_label'] == de_novo_motif]
@@ -272,13 +272,13 @@ def handle_modiscolite(
         motif_logo_plot_dir = os.path.join(logo_plot_dir, de_novo_motif)
         os.makedirs(motif_logo_plot_dir, exist_ok=True)
 
-        for seq_name in motif_df['intron_name'].unique():
-            df = motif_df[motif_df['intron_name'] == seq_name]
+        for seq_name in motif_df['unique_ID'].unique():
+            df = motif_df[motif_df['unique_ID'] == seq_name]
             if df.empty:
                 continue
             top_row  = df.loc[df['score'].idxmax()]
             attr_idx = indexing_df.loc[
-                indexing_df["intron_name"] == seq_name, 'index'
+                indexing_df["unique_ID"] == seq_name, 'index'
             ].values[0]
             arr = pt_attributions[attr_idx]
             logger.info(f"Plotting {seq_name} | pattern {de_novo_motif} | "

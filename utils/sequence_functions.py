@@ -134,7 +134,7 @@ def prepare_inputs(
     )
 
     if name_col is None:
-        for candidate in ('intron_name', 'name', 'gene_name'):
+        for candidate in ('unique_ID', 'intron_name', 'name', 'gene_name'):
             if candidate in df.columns:
                 name_col = candidate
                 break
@@ -355,9 +355,9 @@ def attribution_native_only(attrs: np.ndarray, seq: str,
 # Attribution Masking
 # ---------------------------------------------------------------------------
 
-def parse_intron_name(intron_name: str) -> tuple:
-    """Split 'TranscriptName_IntronNumber' → (transcript_name, intron_number)."""
-    tname, num = intron_name.rsplit('_', 1)
+def parse_unique_id(unique_id: str) -> tuple:
+    """Split 'GeneName_PeakNumber' → (gene_name, peak_number)."""
+    tname, num = unique_id.rsplit('_', 1)
     return tname, int(num)
 
 
@@ -470,11 +470,11 @@ def mask_attributions(
                       "adjacent_exons", "intron_and_adjacent_exons"}:
             if elements_df is None:
                 raise ValueError("elements_df is required for exon-based modes.")
-            if 'intron_name' not in row:
+            if 'unique_ID' not in row:
                 raise ValueError(
-                    f"Mode '{mode}' requires 'intron_name' in coord data."
+                    f"Mode '{mode}' requires 'unique_ID' in coord data."
                 )
-            tname, inum = parse_intron_name(str(row['intron_name']))
+            tname, inum = parse_unique_id(str(row['unique_ID']))
             strand = str(row.get('strand', '+'))
             try:
                 up_row, _, dn_row = adjacent_rows_transcriptional(

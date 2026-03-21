@@ -14,7 +14,7 @@
 experiment_dir: "/path/to/outputs/my_run/saliency"
 
 # Coordinate file: one row per genomic element (peak / RBP site / intron)
-# Required columns: chrom, start, end, strand, intron_name (or name)
+# Required columns: chrom, start, end, strand, unique_ID (or name)
 # Optional columns: expression (up/down), tscript_start, tscript_end
 coord_file_path: "/path/to/data/coordinates.csv"
 
@@ -52,7 +52,7 @@ attr_respect_to: "element_only"
 attribution_method: "inputxgradient"
 
 # Column in coord_file used as the element identifier
-name_col: "intron_name"
+name_col: "unique_ID"
 
 
 # ---------------------------------------------------------------------------

@@ -141,8 +141,8 @@ def _prep_indexing_df(cosi_csv, seq_len, modisco_window,
 
     idx = pd.DataFrame({
         "index":       df.index,
-        "intron_name": (df["intron_name"].astype(str) if "intron_name" in df.columns
-                        else df["name"].astype(str)),
+        "unique_ID": (df["unique_ID"].astype(str) if "unique_ID" in df.columns
+                      else df["name"].astype(str)),
         "chrom":       df[chrom_col].astype(str),
         "start":       df["start"].astype(int),
         "end":         df["end"].astype(int),
@@ -162,8 +162,8 @@ def _prep_indexing_df(cosi_csv, seq_len, modisco_window,
                     "gtf_file must be provided when attr_respect_to == "
                     "'whole_transcript' and the CSV lacks tscript_start/tscript_end."
                 )
-            idx["gene_name"] = idx["intron_name"].str.rsplit("_", n=1).str[0]
-            gene_list = sorted({n.split("_")[0] for n in idx["intron_name"].unique()})
+            idx["gene_name"] = idx["unique_ID"].str.rsplit("_", n=1).str[0]
+            gene_list = sorted({n.split("_")[0] for n in idx["unique_ID"].unique()})
             gtf_df = load_and_process_gtf(gtf_file, gene_list)
             gtf_df = select_longest_basic_transcripts(gtf_df)
             tx_df = (
@@ -193,7 +193,7 @@ def _subset_elements_for_indexing(gtf_file, indexing_df):
     if "gene_name" in indexing_df.columns:
         gene_list = indexing_df["gene_name"].unique().tolist()
     else:
-        gene_list = list({n.rsplit("_", 1)[0] for n in indexing_df["intron_name"].unique()})
+        gene_list = list({n.rsplit("_", 1)[0] for n in indexing_df["unique_ID"].unique()})
     gtf_df      = load_and_process_gtf(gtf_file, gene_list)
     gtf_df      = select_longest_basic_transcripts(gtf_df)
     introns_df  = create_introns_dataframe(gtf_df)

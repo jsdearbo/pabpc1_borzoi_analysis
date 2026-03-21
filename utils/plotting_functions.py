@@ -355,7 +355,7 @@ def plot_logo_and_optional_gene_map(
     Plot and save a logo plot for a single row.
     If elements_df and indexing_df are provided, also plot a gene map as a subplot.
     """
-    seq_name = row.intron_name
+    seq_name = row.unique_ID
     plt_start = int(row.start) - (PLOT_WINDOW // 2)
     plt_end = int(row.start) + (PLOT_WINDOW // 2)
     plt_start = max(0, plt_start)
@@ -367,8 +367,8 @@ def plot_logo_and_optional_gene_map(
         transcript_name = seq_name.split('_')[0]
         gene_name = transcript_name.split('-')[0]
         seq_elements_df = elements_df[elements_df['transcript_name'] == transcript_name]
-        intron_start = indexing_df.loc[indexing_df['intron_name'] == seq_name, 'start'].values[0]
-        intron_end = indexing_df.loc[indexing_df['intron_name'] == seq_name, 'end'].values[0]
+        intron_start = indexing_df.loc[indexing_df['unique_ID'] == seq_name, 'start'].values[0]
+        intron_end = indexing_df.loc[indexing_df['unique_ID'] == seq_name, 'end'].values[0]
         intron_midpt = (intron_start + intron_end) // 2
         if row.strand == '+':
             highlight_start = intron_midpt + (int(row.start) - tensor_center)
@@ -416,7 +416,7 @@ def plot_cosi_boxplot(
     save_name: str = "cosi_boxplot.png",
     value_label: str = "CoSI",
     plot_dir: str = ".",
-    intron_names: list = None # list of intron names to highlight, if any
+    unique_IDs: list = None # list of intron names to highlight, if any
 ):
     """
     Create a boxplot of CoSI values for each DataFrame.
@@ -457,7 +457,7 @@ def plot_cosi_boxplot_from_df(
     save_name: str = "cosi_boxplot.png",
     value_label: str = "CoSI",
     plot_dir: str = ".",
-    intron_names: list = None # list of intron names to highlight, if any
+    unique_IDs: list = None # list of intron names to highlight, if any
 ):
     """
     Create a boxplot of CoSI values from an aggregate DataFrame of all timepoints,
@@ -489,8 +489,8 @@ def plot_cosi_boxplot_from_df(
     ).dropna(subset=["CoSI"])
 
     # Optionally highlight specific introns
-    if intron_names is not None:
-        long_df["highlight"] = long_df["intron_name"].isin(intron_names)
+    if unique_IDs is not None:
+        long_df["highlight"] = long_df["unique_ID"].isin(unique_IDs)
     else:
         long_df["highlight"] = False
 
@@ -526,7 +526,7 @@ def plot_cosi_boxplot_from_df(
             zorder=10
         )
         # Overlay highlighted outliers (if any)
-        if intron_names is not None:
+        if unique_IDs is not None:
             highlighted = outliers[outliers["highlight"]]
             if not highlighted.empty:
                 x_jitter_hl = i + np.random.uniform(-0.15, 0.15, size=len(highlighted))
@@ -982,13 +982,13 @@ def plot_logo_gene_map_and_read_densities(
     
     logger.info(
         "[PLOT DEBUG] intron=%s example_index=%s row_start=%s row_end=%s arr_shape=%s slice_len=%s",
-        row.get("intron_name"), row.get("example_index"),
+        row.get("unique_ID"), row.get("example_index"),
         row["start"], row["end"],
         arr.shape,
         int(row["end"] - row["start"])
     )
 
-    seq_name = row.intron_name
+    seq_name = row.unique_ID
     plt_start = int(row.start) - (PLOT_WINDOW // 2)
     plt_end = int(row.start) + (PLOT_WINDOW // 2)
     plt_start = max(0, plt_start)
@@ -1010,8 +1010,8 @@ def plot_logo_gene_map_and_read_densities(
 
     # 2. Get Highlight Bounds (Motif/Seqlet)
     # Ensure seq_name exists in indexing_df
-    if seq_name in indexing_df['intron_name'].values:
-        row_idx = indexing_df.loc[indexing_df['intron_name'] == seq_name].iloc[0]
+    if seq_name in indexing_df['unique_ID'].values:
+        row_idx = indexing_df.loc[indexing_df['unique_ID'] == seq_name].iloc[0]
         
         # Determine the "center" of the genomic map relative to the model input
         # Since input sequences are CENTERED on the RBP peak (element_start/element_end),
@@ -1041,8 +1041,8 @@ def plot_logo_gene_map_and_read_densities(
 
     # 3. Get Element Highlight Bounds (RBP site)
     element_highlight_bounds = None
-    if seq_name in indexing_df['intron_name'].values:
-        row_idx = indexing_df.loc[indexing_df['intron_name'] == seq_name].iloc[0]
+    if seq_name in indexing_df['unique_ID'].values:
+        row_idx = indexing_df.loc[indexing_df['unique_ID'] == seq_name].iloc[0]
         
         if 'element_start' in row_idx and pd.notna(row_idx['element_start']):
              el_s = int(row_idx['element_start'])
