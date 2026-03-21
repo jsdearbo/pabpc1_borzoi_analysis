@@ -12,10 +12,15 @@ dependencies:
     # Deep learning
     - torch>=2.0
     - pytorch-lightning>=2.0
+    
+    # Custom fork of tfmodisco-lite with reverse complementation optional (for use with gReLU)
+    - git+https://github.com/jsdearbo/tfmodisco-lite.git@main
 
     # gReLU genomics library (includes Borzoi model loading and attribution)
-    # https://github.com/Genentech/gReLU
-    - grelu>=0.4
+    # Custom fork with pre-computed attribution functionality for TF-MoDISco
+    - git+https://github.com/jsdearbo/gReLU.git@main
+    # Force pip to pull from our feature branch to get the latest Modisco changes
+    - git+https://github.com/jsdearbo/gReLU.git@pre-computed-attr-modisco
 
     # Motif discovery & enrichment
     - tangermeme==0.4.2   # pinned — API changed in later versions
