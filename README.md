@@ -34,6 +34,16 @@ The pipeline runs in four sequential steps, each driven by a single YAML config 
 
 - **conda** or **mamba** (for environment setup)
 
+### Reference genome sequence
+
+The pipeline fetches DNA sequences via [genomepy](https://github.com/vanheeringen-lab/genomepy), which will automatically download and cache the specified genome refernce file, e.g. `hg38` (~800 MB) on first run. No manual setup is required for most users.
+
+If genomepy is configured on your system with a different name for GRCh38 (e.g. `"GRCh38"` instead of `"hg38"`), set the optional `genome_name` key in your config:
+
+```yaml
+genome_name: "GRCh38"
+```
+
 ### Reference genome GTF
 
 A GTF annotation file is required for Steps 3–4 (gene-structure models and enrichment FASTA generation). The manuscript figures use **Ensembl GRCh38 release 110**:

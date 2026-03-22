@@ -18,12 +18,7 @@ dependencies:
 
     # gReLU genomics library (includes Borzoi model loading and attribution)
     # Custom fork with pre-computed attribution functionality for TF-MoDISco
-    - git+https://github.com/jsdearbo/gReLU.git@main
-    # Force pip to pull from our feature branch to get the latest Modisco changes
     - git+https://github.com/jsdearbo/gReLU.git@pre-computed-attr-modisco
-
-    # Motif discovery & enrichment
-    - tangermeme==0.4.2   # pinned — API changed in later versions
 
     # Bioinformatics I/O
     - h5py>=3.10
