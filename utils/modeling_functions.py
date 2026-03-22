@@ -110,7 +110,6 @@ def run_modisco_analysis(
         model,
         seqs=input_seqs,
         genome=genome,
-        meme_file="CISBP_RNA_DNA_ENCODED",
         method="completed",
         out_dir=experiment_dir,
         batch_size=1024,
