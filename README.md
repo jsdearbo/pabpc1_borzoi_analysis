@@ -34,6 +34,17 @@ The pipeline runs in four sequential steps, each driven by a single YAML config 
 
 - **conda** or **mamba** (for environment setup)
 
+### Reference genome GTF
+
+A GTF annotation file is required for Steps 3–4 (gene-structure models and enrichment FASTA generation). The manuscript figures use **Ensembl GRCh38 release 110**:
+
+```bash
+wget https://ftp.ensembl.org/pub/release-110/gtf/homo_sapiens/Homo_sapiens.GRCh38.110.gtf.gz
+gunzip Homo_sapiens.GRCh38.110.gtf.gz
+```
+
+Then set `gtf_file` in your config to the path of the uncompressed `.gtf` file.
+
 ### Python environment
 
 Create the conda environment from the provided file:
