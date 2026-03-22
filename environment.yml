@@ -37,6 +37,9 @@ dependencies:
     - logomaker>=0.8
     - adjustText>=1.0
 
+    # Motif scanning (FIMO)
+    - tangermeme==0.4.2
+
     # Utilities
     - pyyaml>=6.0
     - tqdm
