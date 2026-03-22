@@ -24,6 +24,12 @@ gtf_file: "/path/to/genome/Homo_sapiens.GRCh38.110.gtf"
 # Species: 'human' or 'mouse'
 species: "human"
 
+# genomepy genome name override (optional).
+# By default, 'human' maps to 'hg38' and 'mouse' maps to 'mm10'.
+# Set this only if genomepy is configured with a different name on your system
+# (e.g. genome_name: "GRCh38").
+# genome_name: "hg38"
+
 # Borzoi model: 'pretrained' loads the public Borzoi weights via gReLU.
 # Use 'fine_tuned' and supply checkpoint_path to use a custom checkpoint.
 model_selection: "pretrained"

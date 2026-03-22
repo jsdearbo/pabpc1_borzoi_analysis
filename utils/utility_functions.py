@@ -9,6 +9,7 @@ import grelu.resources
 import grelu.sequence.format
 import grelu.interpret.score
 import grelu.transforms.prediction_transforms
+import grelu.lightning
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,6 @@ def load_model(species: str, model_selection: str = None, checkpoint_path: str =
         if model_selection == 'fine_tuned':
             if checkpoint_path is None:
                 raise ValueError("checkpoint_path must be provided for fine-tuned models.")
-            import grelu.lightning
             model = grelu.lightning.LightningModel.load_from_checkpoint(
                 checkpoint_path, map_location=device
             )

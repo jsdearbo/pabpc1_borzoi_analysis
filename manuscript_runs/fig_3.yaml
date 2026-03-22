@@ -9,7 +9,8 @@ experiment_dir: "outputs/fig3"
 # Input Data
 # Download the GTF before running — see README for instructions.
 coord_file_path: "manuscript_runs/subset_peaks_data.csv"
-gtf_file: "/path/to/Homo_sapiens.GRCh38.110.gtf"
+# gtf_file: "/path/to/Homo_sapiens.GRCh38.110.gtf"
+gtf_file: "/mnt/data_sda/jdearborn/genomes/human/GRCh38/gtf/Homo_sapiens.GRCh38.110.gtf"
 
 # Model Settings
 species: "human"

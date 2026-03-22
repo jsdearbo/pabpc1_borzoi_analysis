@@ -74,16 +74,23 @@ def make_input_interval(chrom: str, start: int, end: int,
 
 def fetch_sequence(intervals: pd.DataFrame, species: str,
                    genome_version: Optional[str] = None) -> str:
-    """Fetch the DNA sequence for a single input window via grelu."""
+    """Fetch the DNA sequence for a single input window via grelu.
+
+    genome_version overrides the default species→genome mapping when set
+    (e.g. ``genome_version="GRCh38"`` if genomepy is configured with that name
+    instead of the default ``hg38``).
+    """
     ivals = intervals.copy()
 
     if species == "human":
-        genome_version = "hg38"
+        if genome_version is None:
+            genome_version = "hg38"
         ivals['chrom'] = ivals['chrom'].apply(
             lambda x: 'chr' + str(x) if not str(x).startswith('chr') else str(x)
         )
     elif species == "mouse":
-        genome_version = genome_version if genome_version in ["mm10", "GRCm39"] else "mm10"
+        if genome_version is None:
+            genome_version = "mm10"
         if genome_version == "GRCm39":
             ivals['chrom'] = ivals['chrom'].apply(
                 lambda x: str(x).replace('chr', '') if str(x).startswith('chr') else str(x)
@@ -106,6 +113,7 @@ def prepare_inputs(
     centering_mode: str,
     attr_respect_to: str,
     name_col: str = None,
+    genome_name: str = None,
 ) -> list:
     """
     Build a list of AttributionInput objects, one per row in df.
@@ -144,7 +152,7 @@ def prepare_inputs(
         chrom, start, end, strand = get_element_coords(row, centering_mode)
         input_intervals = make_input_interval(chrom, start, end, seq_len, strand)
         eval_intervals = make_eval_interval(row, attr_respect_to)
-        sequence = fetch_sequence(input_intervals, species)
+        sequence = fetch_sequence(input_intervals, species, genome_version=genome_name)
         inputs.append(AttributionInput(sequence, input_intervals, eval_intervals, name, meta=row))
 
     return inputs

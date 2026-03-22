@@ -55,6 +55,7 @@ def main():
     experiment_dir  = cfg["experiment_dir"]
     coord_file_path = cfg["coord_file_path"]
     species         = cfg.get("species", "human")
+    genome_name     = cfg.get("genome_name")          # optional override (e.g. "GRCh38")
     task_id         = cfg["task_id"]
     model_selection = cfg.get("model_selection", "pretrained")
     checkpoint_path = cfg.get("checkpoint_path")
@@ -97,12 +98,12 @@ def main():
     logger.info(f"Loaded {len(coord_data)} coordinate rows")
 
     # Build AttributionInput objects
-    genome = "hg38" if species == "human" else "mm10"
     element_inputs = prepare_inputs(
         coord_data, model, species,
         centering_mode=centering_mode,
         attr_respect_to=attr_respect_to,
         name_col=name_col,
+        genome_name=genome_name,
     )
 
     # Compute attributions
