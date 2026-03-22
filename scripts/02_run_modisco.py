@@ -12,7 +12,7 @@ Usage
 
 Outputs (written under experiment_dir/<subset>/<masked_Xbp_flank>/)
 ---------------------------------------------------------------------
-    modisco_results.h5    — raw MoDISco output
+    modisco_report.h5     — raw MoDISco output
     forward.meme          — de-novo motifs (forward strand)
     combined.meme         — forward + reverse-complement motifs
 """
@@ -141,7 +141,7 @@ def main():
             )
 
             # Convert H5 → MEME
-            h5_path = os.path.join(out_dir, "modisco_results.h5")
+            h5_path = os.path.join(out_dir, "modisco_report.h5")
             convert_modisco_h5_to_meme(h5_path, out_dir)
 
     logger.info("MoDISco analysis complete.")
