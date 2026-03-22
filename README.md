@@ -103,6 +103,26 @@ Optional columns used when present:
 | `expression` | Subset label (e.g. `up` / `down`) — used by steps 2 and 3 to split data |
 | `tscript_start` / `tscript_end` | Transcript bounds for `whole_transcript` measurement mode |
 
+## Reproducing the Manuscript Analyses
+If you are running this pipeline to reproduce the findings in our Nucleic Acids Research manuscript, all necessary configurations and input data have been preserved.
+
+### 1. Pre-processed Input Data
+The primary input for these analyses is a filtered coordinate CSV. To detect sequence patterns in close proximity to PABPC1 binding sites, we first selected genes with differential expression identified by DESeq2 following PABPC1 depletion. We then filtered those genes to include only regions with PABPC1-enriched binding windows, as identified in our CLAP-seq dataset.
+
+*The resulting processed dataset (`subset_peaks_data.csv`) is provided in the `manuscript_runs/` directory of this repository [OR: hosted on Zenodo at DOI: 10.5281/zenodo.19154687].*
+
+### 2. Manuscript Configurations
+The exact YAML configuration files used to generate the figures and enrichment scores for the manuscript are located in the `manuscript_runs/` directory.
+
+To run the pipeline exactly as described in the study, pass these specific configuration files to the scripts rather than the example config:
+
+```bash
+# Example: Reproducing Figure 3 motif discovery
+python scripts/01_get_attributions.py --config manuscript_runs/fig_3.yaml
+python scripts/02_run_modisco.py --config manuscript_runs/fig_3.yaml
+python scripts/03_run_enrichment.py --config manuscript_runs/fig_3.yaml
+```
+
 ### GTF file (required for Step 4)
 
 Any Ensembl or GENCODE GTF. Used to build gene-structure models for the gene-map visualisation. The pipeline selects the longest "basic" transcript per gene.
@@ -165,7 +185,7 @@ experiment_dir/
 │
 ├── all_peaks_modisco/
 │   ├── masked_50bp_flank/
-│   │   ├── modisco_results.h5    # raw TF-MoDISco output
+│   │   ├── modisco_report.h5     # raw TF-MoDISco output
 │   │   ├── forward.meme          # de novo motifs (forward strand)
 │   │   └── combined.meme         # forward + reverse-complement motifs
 │   └── masked_500bp_flank/
@@ -244,7 +264,7 @@ If you use this pipeline, please cite:
 - **TF-MoDISco / modisco-lite**: Shrikumar A, et al. (2020); Trofimova D & Shrikumar A (2023).
 - **MEME Suite**: Bailey TL, et al. *The MEME Suite.* Nucleic Acids Research (2015).
 
-> **This analysis**: [your paper citation here]
+> **This analysis**: Miller Z, Dearborn J, Barrantes-Reynolds R, Paculova H, Honson D, Sha J, Deng W, Kirch T, Dowell W, Languon S, Freeman K, Frietze S, Wohlschlegel J, Majumdar D. PABPC1 modulates PA site choice through direct interaction with immunoglobulin pre-mRNA. (In preparation)
 
 ---
 
