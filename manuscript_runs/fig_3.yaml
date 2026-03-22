@@ -9,8 +9,7 @@ experiment_dir: "outputs/fig3"
 # Input Data
 # Download the GTF before running — see README for instructions.
 coord_file_path: "manuscript_runs/subset_peaks_data.csv"
-# gtf_file: "/path/to/Homo_sapiens.GRCh38.110.gtf"
-gtf_file: "/mnt/data_sda/jdearborn/genomes/human/GRCh38/gtf/Homo_sapiens.GRCh38.110.gtf"
+gtf_file: "/path/to/Homo_sapiens.GRCh38.110.gtf"
 
 # Model Settings
 species: "human"
@@ -36,7 +35,7 @@ modisco_len: 1000
 
 # Run separately for up-regulated, down-regulated, and all peaks
 groupby_column: "expression"
-flank: [500, 50]                # Two MoDISco runs: wide (500 bp) and narrow (50 bp) flank
+flank: [50]                # Two MoDISco runs: wide (500 bp) and narrow (50 bp) flank
 
 # Flags
 save_native_attributions: false
@@ -47,13 +46,11 @@ generate_fastas: false          # FASTAs are generated dynamically in the enrich
 # Step 3: Enrichment Analysis
 # ==========================================
 enrichment:
-  run_sea: true
+  run_sea: false
   run_fimo: true
 
   comparisons:
     - primary: "up"
-      control: "all"
-    - primary: "down"
       control: "all"
 
 # ==========================================
