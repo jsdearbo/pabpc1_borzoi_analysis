@@ -18,6 +18,7 @@ Outputs (written under experiment_dir/enrichment/<primary>_vs_<control>/)
     */sea_enrichment_scatter.png, */fimo_enrichment_scatter.png
 """
 import os
+import re
 import sys
 import pickle
 import logging
@@ -50,15 +51,47 @@ def load_config(config_path: str) -> dict:
         return yaml.safe_load(f) or {}
 
 
-def get_subset_sequences(subset_mask, input_seqs, mapping_df, coord_data):
-    """Extract sequences and names for a boolean row mask over coord_data."""
-    valid_indices   = np.where(subset_mask)[0]
-    subset_mapping  = mapping_df[mapping_df["coord_index"].isin(valid_indices)]
-    indices         = subset_mapping["attribution_index"].values
-    seqs            = [input_seqs[i] for i in indices]
-    names           = (subset_mapping["name"].values.tolist()
-                       if "name" in subset_mapping else
-                       [f"seq_{i}" for i in indices])
+def crop_sequence(seq: str, element_len: int, flank: int) -> str:
+    """Crop a sequence to element_len + flank bp on each side, centered."""
+    total_len = len(seq)
+    mid = total_len // 2
+    half_len = element_len // 2
+    start = max(0, mid - half_len - flank)
+    end   = min(total_len, mid + (element_len - half_len) + flank)
+    return seq[start:end]
+
+
+def get_subset_sequences(subset_mask, input_seqs, mapping_df, coord_data, flank=None):
+    """Extract sequences and names for a boolean row mask over coord_data.
+
+    If flank is given, each sequence is cropped to element_len + flank bp on
+    each side (matching the window used by MoDISco). Without cropping, long
+    sequences cause FIMO to find chance hits in nearly every entry.
+    """
+    valid_indices  = np.where(subset_mask)[0]
+    subset_mapping = mapping_df[mapping_df["coord_index"].isin(valid_indices)].copy()
+    subset_mapping = subset_mapping.dropna(subset=["coord_index", "attribution_index"])
+    subset_mapping["coord_index"]      = subset_mapping["coord_index"].astype(int)
+    subset_mapping["attribution_index"] = subset_mapping["attribution_index"].astype(int)
+    subset_mapping = subset_mapping.drop_duplicates(subset=["attribution_index"], keep="first")
+
+    attr_indices  = subset_mapping["attribution_index"].values
+    attr_to_coord = dict(zip(subset_mapping["attribution_index"],
+                             subset_mapping["coord_index"]))
+    names = (subset_mapping["name"].astype(str).tolist()
+             if "name" in subset_mapping.columns
+             else [f"seq_{i}" for i in attr_indices])
+
+    seqs = []
+    for attr_idx in attr_indices:
+        seq = input_seqs[attr_idx]
+        if flank is not None:
+            coord_idx  = attr_to_coord[attr_idx]
+            row        = coord_data.iloc[coord_idx]
+            element_len = int(abs(row["end"] - row["start"]))
+            seq = crop_sequence(seq, element_len, flank)
+        seqs.append(seq)
+
     return seqs, names
 
 
@@ -75,9 +108,17 @@ def main():
     source_subset = enrich_cfg.get("source_subset", "all_peaks_modisco")
     source_flank  = enrich_cfg.get("source_flank", "masked_50bp_flank")
     comparisons   = enrich_cfg.get("comparisons", [])
-    run_sea        = enrich_cfg.get("run_sea", True)
-    run_fimo       = enrich_cfg.get("run_fimo", True)
+    run_sea         = enrich_cfg.get("run_sea", True)
+    run_fimo        = enrich_cfg.get("run_fimo", True)
     dedupe_overlaps = cfg.get("dedupe_overlaps", True)
+
+    # Derive FIMO crop flank from source_flank name (e.g. "masked_50bp_flank" → 50)
+    _m = re.search(r"masked_(\d+)bp_flank", source_flank)
+    fimo_flank = int(_m.group(1)) if _m else None
+    if fimo_flank is not None:
+        logger.info(f"FIMO sequences will be cropped to element + {fimo_flank}bp flank")
+    else:
+        logger.warning("Could not parse flank from source_flank; passing full sequences to FIMO")
 
     check_dependencies()
     validate_file(coord_file_path, "Coordinate file")
@@ -116,7 +157,8 @@ def main():
     os.makedirs(fasta_dir, exist_ok=True)
     fasta_paths = {}
     for name, mask in subset_masks.items():
-        seqs, names = get_subset_sequences(mask, input_seqs, mapping_df, coord_data)
+        seqs, names = get_subset_sequences(mask, input_seqs, mapping_df, coord_data,
+                                           flank=fimo_flank)
         out_path    = os.path.join(fasta_dir, f"{name}.fa")
         write_fasta(seqs, names, out_path)
         fasta_paths[name] = out_path
