@@ -32,6 +32,7 @@ from utils.utility_functions import setup_experiment_directory, validate_file
 from utils.enrichment_functions import (
     run_enrichment_analysis, write_fasta, check_dependencies
 )
+from utils.sequence_functions import remove_fasta_overlaps
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
@@ -74,8 +75,9 @@ def main():
     source_subset = enrich_cfg.get("source_subset", "all_peaks_modisco")
     source_flank  = enrich_cfg.get("source_flank", "masked_50bp_flank")
     comparisons   = enrich_cfg.get("comparisons", [])
-    run_sea       = enrich_cfg.get("run_sea", True)
-    run_fimo      = enrich_cfg.get("run_fimo", True)
+    run_sea        = enrich_cfg.get("run_sea", True)
+    run_fimo       = enrich_cfg.get("run_fimo", True)
+    dedupe_overlaps = cfg.get("dedupe_overlaps", True)
 
     check_dependencies()
     validate_file(coord_file_path, "Coordinate file")
@@ -138,12 +140,29 @@ def main():
             continue
 
         logger.info(f"Enrichment: {prim_label} vs {ctrl_label}")
+
+        ctrl_fasta = fasta_paths[ctrl_label]
+        if dedupe_overlaps:
+            logger.info(f"Removing overlaps from control ({ctrl_label})...")
+            try:
+                ctrl_fasta = remove_fasta_overlaps(
+                    primary_fasta=fasta_paths[prim_label],
+                    ctrl_fasta=ctrl_fasta,
+                    cosi_group=prim_label,
+                )
+            except Exception as e:
+                logger.error(
+                    f"Overlap removal failed for {prim_label} vs {ctrl_label}: {e}. "
+                    "Proceeding with original control."
+                )
+                ctrl_fasta = fasta_paths[ctrl_label]
+
         comp_dir = os.path.join(
             experiment_dir, "enrichment", f"{prim_label}_vs_{ctrl_label}"
         )
         run_enrichment_analysis(
             primary_fasta=fasta_paths[prim_label],
-            control_fasta=fasta_paths[ctrl_label],
+            control_fasta=ctrl_fasta,
             meme_file=motif_file,
             output_dir=comp_dir,
             run_sea_tool=run_sea,

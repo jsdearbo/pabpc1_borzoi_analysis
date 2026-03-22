@@ -3,6 +3,7 @@ Sequence preparation, coordinate handling, attribution processing,
 and GTF-derived element utilities used by the PABPC1 attribution pipeline.
 """
 import logging
+import os
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
@@ -563,3 +564,43 @@ def load_fasta_as_dict(fasta_path: str) -> dict:
         if seq_name:
             fasta_dict[seq_name] = ''.join(seq_chunks)
     return fasta_dict
+
+
+def remove_fasta_overlaps(primary_fasta: str, ctrl_fasta: str,
+                           cosi_group: str = "primary") -> str:
+    """
+    Remove sequences from ctrl_fasta whose headers appear in primary_fasta.
+
+    Writes the filtered control to
+    ``<ctrl_base>_no_overlaps_<cosi_group>.fa`` alongside the original
+    and returns its path.  Safe to call repeatedly — existing output is
+    overwritten so results stay current.
+    """
+    primary_sequences = load_fasta_as_dict(primary_fasta)
+    logger.info(
+        f"Loaded {len(primary_sequences)} sequences from primary: {primary_fasta}"
+    )
+
+    ctrl_sequences = load_fasta_as_dict(ctrl_fasta)
+    filtered = {h: s for h, s in ctrl_sequences.items()
+                if h not in primary_sequences}
+    overlaps_found = len(ctrl_sequences) - len(filtered)
+
+    if overlaps_found:
+        logger.info(
+            f"Removed {overlaps_found} overlapping sequences from control "
+            f"({len(ctrl_sequences)} → {len(filtered)})"
+        )
+    else:
+        logger.info("No overlapping sequences found between primary and control.")
+
+    base_name = os.path.splitext(ctrl_fasta)[0]
+    output_fasta = f"{base_name}_no_overlaps_{cosi_group}.fa"
+    with open(output_fasta, 'w') as f:
+        for header, sequence in filtered.items():
+            f.write(f">{header}\n")
+            for i in range(0, len(sequence), 80):
+                f.write(sequence[i:i + 80] + '\n')
+
+    logger.info(f"Filtered control written to: {output_fasta}")
+    return output_fasta
