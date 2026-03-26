@@ -116,6 +116,10 @@ def main():
         # Override subset_coord with intersected rows so mask_attributions gets matching lengths
         subset_coord = subset_mapping.reset_index(drop=True)
 
+        if len(subset_input_seqs) == 0:
+            logger.warning(f"Subset '{subset_name}' has 0 valid sequences. Skipping to avoid length assertion errors.")
+            continue
+
         for flank in flanks:
             logger.info(f"Running MoDISco: {subset_name} | flank={flank}")
             out_dir = os.path.join(experiment_dir, subset_name, f"masked_{flank}bp_flank")
