@@ -115,7 +115,7 @@ def main():
     # Compute attributions
     attributions_list = []
     successful_inputs = []
-    for item in element_inputs[:10]:
+    for item in element_inputs:
         try:
             logger.info(f"Processing: {item.name}")
             selected_bins = get_eval_bins(model, item.input_intervals, item.eval_intervals)
