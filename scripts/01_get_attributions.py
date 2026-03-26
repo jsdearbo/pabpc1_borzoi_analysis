@@ -26,7 +26,7 @@ import yaml
 # Make utils/ importable regardless of where the script is called from
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.sequence_functions import prepare_inputs, get_eval_bins
+from utils.sequence_functions import prepare_inputs, get_eval_bins, reorient_to_rna
 from utils.utility_functions import (
     setup_experiment_directory, validate_file, load_model, load_tasks
 )
@@ -65,9 +65,15 @@ def main():
     attr_respect_to = cfg.get("attr_respect_to", "element_only")
     method          = cfg.get("attribution_method", "inputxgradient")
     name_col        = cfg.get("name_col")
+    strand_col      = cfg.get("strand_col", "strand")
+    output_orientation = cfg.get("output_orientation", "rna")
 
     validate_file(coord_file_path, "Coordinate file")
     setup_experiment_directory(experiment_dir)
+
+    # Define genome
+    genome = genome_name if genome_name is not None else ("hg38" if species == "human" else "mm10")
+    logger.info(f"Using genome: {genome}")
 
     # Load model
     model, device = load_model(
@@ -108,7 +114,8 @@ def main():
 
     # Compute attributions
     attributions_list = []
-    for item in element_inputs:
+    successful_inputs = []
+    for item in element_inputs[:10]:
         try:
             logger.info(f"Processing: {item.name}")
             selected_bins = get_eval_bins(model, item.input_intervals, item.eval_intervals)
@@ -123,6 +130,7 @@ def main():
                 batch_size=1,
             )
             attributions_list.append(attrs)
+            successful_inputs.append(item)
         except Exception as e:
             logger.exception(f"Failed for {item.name}: {e}")
         finally:
@@ -134,8 +142,26 @@ def main():
 
     # Save outputs
     final_attributions = np.concatenate(attributions_list, axis=0)
-    names_list   = [inp.name for inp in element_inputs]
-    input_seqs   = [inp.sequence for inp in element_inputs]
+    names_list = [inp.name for inp in successful_inputs]
+    input_seqs = [inp.sequence for inp in successful_inputs]
+
+    mapping_df = pd.DataFrame({
+        "coord_index": [inp.row_idx for inp in successful_inputs] if hasattr(successful_inputs[0], "row_idx") else coord_data.index[:len(successful_inputs)],
+        "name": [inp.name for inp in successful_inputs],
+        "attribution_index": range(len(names_list)),
+    })
+
+    if output_orientation.lower() == "rna":
+        logger.info("Reorienting attributions and input sequences to RNA/transcription orientation")
+        final_attributions, input_seqs = reorient_to_rna(
+            final_attributions=final_attributions,
+            input_seqs=input_seqs,
+            mapping_df=mapping_df,
+            coord_data=coord_data,
+            strand_col=strand_col,
+        )
+    else:
+        logger.info("Keeping attributions in genomic orientation")
 
     with open(os.path.join(experiment_dir, "attributions.pkl"), "wb") as f:
         pickle.dump(final_attributions, f)
@@ -144,16 +170,9 @@ def main():
     with open(os.path.join(experiment_dir, "element_names_list.pkl"), "wb") as f:
         pickle.dump(names_list, f)
 
-    mapping_df = pd.DataFrame({
-        "coord_index":       coord_data.index[:len(element_inputs)],
-        "name":              names_list,
-        "attribution_index": range(len(names_list)),
-    })
     mapping_df.to_csv(os.path.join(experiment_dir, "attribution_mapping.csv"), index=False)
 
-    logger.info(
-        f"Done. Saved {len(attributions_list)} attributions to {experiment_dir}"
-    )
+    logger.info(f"Done. Saved {len(attributions_list)} attributions to {experiment_dir}")
 
 
 if __name__ == "__main__":

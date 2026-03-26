@@ -154,7 +154,10 @@ def prepare_inputs(
         input_intervals = make_input_interval(chrom, start, end, seq_len, strand)
         eval_intervals = make_eval_interval(row, attr_respect_to)
         sequence = fetch_sequence(input_intervals, species, genome_version=genome_name)
-        inputs.append(AttributionInput(sequence, input_intervals, eval_intervals, name, meta=row))
+        inp = AttributionInput(sequence, input_intervals, eval_intervals, name, meta=row)
+        inp.row_idx = idx
+        inp.strand = strand
+        inputs.append(inp)
 
     return inputs
 
@@ -604,3 +607,62 @@ def remove_fasta_overlaps(primary_fasta: str, ctrl_fasta: str,
 
     logger.info(f"Filtered control written to: {output_fasta}")
     return output_fasta
+
+# ---------------------------------------------------------------------------
+# Reverse Complement Utilities
+# ---------------------------------------------------------------------------
+
+def _reverse_complement_array(arr: np.ndarray) -> np.ndarray:
+    """
+    Reverse-complement an array shaped (4, L) or (N, 4, L).
+
+    Assumes channel order A,C,G,T.
+    """
+    RC_INDEX = np.array([3, 2, 1, 0])  # A,C,G,T -> T,G,C,A
+    RC_TABLE = str.maketrans("ACGTacgt", "TGCAtgca")
+
+    if arr.ndim == 2:
+        if arr.shape[0] != 4:
+            raise ValueError(f"Expected shape (4, L), got {arr.shape}")
+        return arr[RC_INDEX, ::-1]
+
+    if arr.ndim == 3:
+        if arr.shape[1] != 4:
+            raise ValueError(f"Expected shape (N, 4, L), got {arr.shape}")
+        return arr[:, RC_INDEX, ::-1]
+
+    raise ValueError(f"Unsupported ndim={arr.ndim} for shape {arr.shape}")
+
+def reorient_to_rna(final_attributions, input_seqs, mapping_df, coord_data, strand_col="strand"):
+    """
+    Reorient precomputed genomic attributions and one-hot input sequences
+    into transcription/RNA orientation using strand information.
+    """
+    if strand_col not in coord_data.columns:
+        raise ValueError(f"'{strand_col}' not found in coord_data columns")
+
+    oriented_attributions = final_attributions.copy()
+    oriented_input_seqs = list(input_seqs)
+
+    RC_TABLE = str.maketrans("ACGTacgt", "TGCAtgca")
+
+    for _, row in mapping_df.iterrows():
+        coord_idx = int(row["coord_index"])
+        attr_idx = int(row["attribution_index"])
+        strand = str(coord_data.loc[coord_idx, strand_col]).strip()
+
+        if strand == "-":
+            oriented_attributions[attr_idx] = _reverse_complement_array(
+                oriented_attributions[attr_idx]
+            )
+            seq = oriented_input_seqs[attr_idx]
+            if isinstance(seq, str):
+                oriented_input_seqs[attr_idx] = seq.translate(RC_TABLE)[::-1]
+            else:
+                oriented_input_seqs[attr_idx] = _reverse_complement_array(seq)
+        elif strand == "+":
+            continue
+        else:
+            raise ValueError(f"Unexpected strand value at coord index {coord_idx}: {strand!r}")
+
+    return oriented_attributions, oriented_input_seqs
