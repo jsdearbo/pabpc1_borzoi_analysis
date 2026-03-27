@@ -148,9 +148,9 @@ def main():
     subset_masks = {}
     if groupby_col and groupby_col in coord_data.columns:
         for val in coord_data[groupby_col].unique():
-            label = f"{val}_peaks_modisco"
+            label = f"{val}_peaks"
             subset_masks[label] = (coord_data[groupby_col] == val).values
-    subset_masks["all_peaks_modisco"] = np.ones(len(coord_data), dtype=bool)
+    subset_masks["all_peaks"] = np.ones(len(coord_data), dtype=bool)
 
     # Generate FASTA files for every subset
     fasta_dir   = os.path.join(experiment_dir, "fasta_files")
@@ -173,8 +173,8 @@ def main():
         return
 
     for comp in comparisons:
-        prim_label = f"{comp['primary']}_peaks_modisco"
-        ctrl_label = f"{comp['control']}_peaks_modisco"
+        prim_label = f"{comp['primary']}_peaks"
+        ctrl_label = f"{comp['control']}_peaks"
         if prim_label not in fasta_paths or ctrl_label not in fasta_paths:
             logger.warning(
                 f"Skipping {prim_label} vs {ctrl_label}: subset FASTA not found."
@@ -200,7 +200,7 @@ def main():
                 ctrl_fasta = fasta_paths[ctrl_label]
 
         comp_dir = os.path.join(
-            experiment_dir, "enrichment", f"{prim_label}_vs_{ctrl_label}"
+            experiment_dir, "enrichment", source_subset, f"{prim_label}_vs_{ctrl_label}"
         )
         run_enrichment_analysis(
             primary_fasta=fasta_paths[prim_label],
@@ -216,3 +216,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
