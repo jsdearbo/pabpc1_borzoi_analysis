@@ -102,16 +102,23 @@ def main():
     subsets.append(("all_peaks_modisco", np.ones(len(coord_data), dtype=bool)))
 
     for subset_name, mask in subsets:
-        subset_coord = coord_data[mask].copy().reset_index(drop=True)
+        subset_coord_full = coord_data[mask].copy()
 
-        # Map subset rows → attribution indices
+        # Map subset rows → attribution indices via an inner join to discard failed sequences
         subset_mapping = pd.merge(
-            subset_coord, mapping_df,
-            left_index=True, right_on="coord_index", how="left"
+            subset_coord_full, mapping_df,
+            left_index=True, right_on="coord_index", how="inner"
         )
-        subset_indices      = subset_mapping["attribution_index"].values
+        subset_indices      = subset_mapping["attribution_index"].astype(int).values
         subset_attributions = final_attributions[subset_indices]
         subset_input_seqs   = [input_seqs[i] for i in subset_indices]
+        
+        # Override subset_coord with intersected rows so mask_attributions gets matching lengths
+        subset_coord = subset_mapping.reset_index(drop=True)
+
+        if len(subset_input_seqs) == 0:
+            logger.warning(f"Subset '{subset_name}' has 0 valid sequences. Skipping to avoid length assertion errors.")
+            continue
 
         for flank in flanks:
             logger.info(f"Running MoDISco: {subset_name} | flank={flank}")
@@ -149,3 +156,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
