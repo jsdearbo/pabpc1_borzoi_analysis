@@ -69,6 +69,10 @@ def main():
     validate_file(coord_file_path, "Coordinate file")
     setup_experiment_directory(experiment_dir)
 
+    # Define genome
+    genome = genome_name if genome_name is not None else ("hg38" if species == "human" else "mm10")
+    logger.info(f"Using genome: {genome}")
+
     # Load model
     model, device = load_model(
         species=species,
