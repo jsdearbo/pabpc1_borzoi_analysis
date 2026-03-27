@@ -49,9 +49,11 @@ enrichment:
   run_sea: false
   run_fimo: true
 
+  source_subset: "all_peaks_modisco"
+
   comparisons:
     - primary: "up"
-      control: "all"
+      control: "down"
 
 # ==========================================
 # Step 4: Motif Mapping
@@ -60,6 +62,3 @@ motif_mapping:
   modisco_window: 1000
   selection_method: "modiscolite"
   attr_respect_to: "whole_transcript"
-
-  plot:
-    modes: ["combined"]
