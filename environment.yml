@@ -38,7 +38,7 @@ dependencies:
     - adjustText>=1.0
 
     # Motif scanning (FIMO)
-    - tangermeme==0.4.2
+    - tangermeme==0.4.2  # may need 0.5.0 for gReLU; check compatibility
 
     # Utilities
     - pyyaml>=6.0
